@@ -1,0 +1,60 @@
+{block:Text}:
+    {Title} - contents of <regular-title>
+    {Body} - contents of <regular-body>
+    {block:More} - rendered if the post's contents has "<!-- more -->" in it. comment is ignored
+
+    {Permalink} - TODO: have to manage this properly, maybe just relative
+
+{block:Photo}:
+    {LinkOpenTag} - <a href> to "{blog-url}/image/{post-id}", see: https://perchbird.tumblr.com/image/180737746604
+    {LinkCloseTag} - </a>
+    {PhotoURL-HighRes} - contents of <photo-url> where 'max-width' = '1280'
+
+    {block:Caption} - rendered if there is a <photo-caption>
+    {Caption} - contents of <photo-caption>
+
+{block:Quote}:
+    {Quote} - contents of <quote-text>
+    {block:Source} - rendered if there is a <quote-source>
+    {Source} - contents of <quote-source>
+
+{block:Link}:
+    {URL} - contents of <link-url>
+    {Target} - Outputs target="_blank" if you've enabled "Open links in new window". CAN IGNORE.
+    {Name} - contents of <link-text> if present, otherwise contents of <link-url>
+    {block:Description} - rendered if there is a <link-description>
+    {Description} - contents of <link-description>
+
+{block:Chat}:
+    {block:Title} - rendered if there is a <conversation-title>
+    {Title} - contents of <conversation-title>
+
+    {block:Lines} - rendered for each <line> inside <conversation>
+        {Alt} - "even" or "odd" for each line, starting with "odd"
+        {block:Label} - rendered if there is a "label" attribute on this <line>
+        {Label} - the contents of the "label" attribute on this <line>
+        {block:Name} - rendered if there is a "name" attribute on this <line>
+        {Name} - the contents of the "Name" attribute on this <line>
+        {Line} - the contents of this <line>
+
+{block:Answer}:
+    {Asker} - no data. might have to scrape
+    {Question} - contents of <question>
+    {Answer} - contents of <answer>
+
+Complex types:
+
+{block: Photoset}:
+    {Photoset-500} - embed. see Photoset embed for more info
+    {block:Caption} - rendered if there is a <photo-caption>
+    {Caption} - contents of <photo-caption>
+
+{block:Audio}:
+    {AudioEmbed-XXX} - contents of <audio-embed> WITH width replaced with XXX. see Audio embed for more info
+    {block:Caption} - rendered if there is an <audio-caption>
+    {Caption} - contents of <audio-caption>
+
+{block:Video}:
+    {Video-XXX} - contents of <video-player> WITH width replaced with XXX
+    {block:Caption} - rendered if there is an <video-caption>
+    {Caption} - contents of <video-caption>

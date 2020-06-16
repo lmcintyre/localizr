@@ -1,3 +1,18 @@
+
+General page stuff:
+    Dates:
+        {block:Date} - rendered for all posts
+
+
+    Tags:
+        {block:HasTags} - rendered if there are tags
+        {block:Tags} - rendered for EVERY tag
+        {TagURL} - the tag page URL - "{blog-url}/tagged/{tag}"
+        {Tag} - the tag text
+
+
+Post section:
+
 {block:Text}:
     {Title} - contents of <regular-title>
     {Body} - contents of <regular-body>

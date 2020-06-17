@@ -1,5 +1,9 @@
 from flask_sqlalchemy import SQLAlchemy
 from localizr import app
+from datetime import datetime
+import time
+import timeago
+
 
 db = SQLAlchemy(app)
 
@@ -45,6 +49,58 @@ class Post(db.Model):
     video_post = db.relationship("VideoPost", back_populates="base_post")
     audio_post = db.relationship("AudioPost", back_populates="base_post")
 
+    def permalink(self):
+        return f"/post/{self.id}"
+
+    def has_readmore(self):
+        more_flag = "<!-- more -->"
+
+        if self.type == "regular":
+            if self.regular_post[0].caption is not None:
+                return more_flag in self.regular_post[0].caption
+        elif self.type == "photo":
+            if self.photo_post[0].caption is not None:
+                return more_flag in self.photo_post[0].caption
+        elif self.type == "quote":
+            if self.quote_post[0].source is not None:
+                return more_flag in self.quote_post[0].caption
+        elif self.type == "link":
+            if self.link_post[0].desc is not None:
+                return more_flag in self.link_post[0].desc
+        elif self.type == "audio":
+            if self.audio_post[0].caption is not None:
+                return more_flag in self.audio_post[0].caption
+        elif self.type == "video":
+            if self.video_post[0].caption is not None:
+                return more_flag in self.video_post[0].caption
+        else:
+            return False
+
+    def day_of_week(self):
+        return time.strftime("%A", time.localtime(self.unix_timestamp))
+
+    def day_of_month(self):
+        return time.strftime("%d", time.localtime(self.unix_timestamp))
+
+    def month(self):
+        return time.strftime("%B", time.localtime(self.unix_timestamp))
+
+    def year(self):
+        return time.strftime("%Y", time.localtime(self.unix_timestamp))
+
+    def hour24(self):
+        return time.strftime("%H", time.localtime(self.unix_timestamp))
+
+    def minute(self):
+        return time.strftime("%M", time.localtime(self.unix_timestamp))
+
+    def seconds(self):
+        return time.strftime("%S", time.localtime(self.unix_timestamp))
+
+    def timeago(self):
+        return timeago.format(datetime.fromtimestamp(self.unix_timestamp),
+                              datetime.now())
+
 
 class Tag(db.Model):
     __tablename__ = "tags"
@@ -53,14 +109,23 @@ class Tag(db.Model):
 
     tag = db.Column(db.Text, nullable=False)
 
+    def __cmp__(self, other):
+        return self.tag == other.tag
+
 
 class RegularPost(db.Model):
     __tablename__ = "regular_posts"
     id = db.Column(db.Integer, db.ForeignKey("posts.id"), primary_key=True)
     base_post = db.relationship("Post", back_populates="regular_post")
 
-    regular_title = db.Column(db.Text, nullable=True)
-    regular_body = db.Column(db.Text, nullable=True)
+    title = db.Column(db.Text, nullable=True)
+    caption = db.Column(db.Text, nullable=True)
+
+    def readmore_caption(self):
+        try:
+            return self.caption[0:self.caption.index("<!-- more --")]
+        except ValueError:
+            return self.caption
 
 
 class PhotoPost(db.Model):
@@ -68,9 +133,30 @@ class PhotoPost(db.Model):
     id = db.Column(db.Integer, db.ForeignKey("posts.id"), primary_key=True)
     base_post = db.relationship("Post", back_populates="photo_post")
 
-    photo_caption = db.Column(db.Text, nullable=True)
+    caption = db.Column(db.Text, nullable=True)
+    is_photoset = db.Column(db.Boolean, nullable=False)
 
     photos = db.relationship("Photo", lazy="dynamic")
+
+    def readmore_caption(self):
+        try:
+            return self.caption[0:self.caption.index("<!-- more --")]
+        except ValueError:
+            return self.caption
+
+    def highres(self, offset):
+        for photo in self.photos:
+            if photo.offset == offset and photo.max_width == 1280:
+                return photo
+
+    def highres_urls(self):
+        ret = []
+
+        for photo in self.photos:
+            if photo.max_width == 1280:
+                ret.append(photo.url)
+
+        return ret
 
 
 class Photo(db.Model):
@@ -84,10 +170,6 @@ class Photo(db.Model):
 
     photo_post = db.relationship("PhotoPost", back_populates="photos")
 
-    def __repr__(self):
-        return f"{self.post_id}, {self.offset},{self.max_width}: " \
-               f"{self.url}, {self.caption}"
-
 
 class LinkPost(db.Model):
     __tablename__ = "link_posts"
@@ -98,6 +180,12 @@ class LinkPost(db.Model):
     url = db.Column(db.Text, nullable=True)
     desc = db.Column(db.Text, nullable=True)
 
+    def readmore_caption(self):
+        try:
+            return self.desc[0:self.desc.index("<!-- more --")]
+        except ValueError:
+            return self.desc
+
 
 class AnswerPost(db.Model):
     __tablename__ = "answer_posts"
@@ -106,6 +194,12 @@ class AnswerPost(db.Model):
 
     question = db.Column(db.Text, nullable=False)
     answer = db.Column(db.Text, nullable=True)
+
+    def readmore_caption(self):
+        try:
+            return self.answer[0:self.answer.index("<!-- more --")]
+        except ValueError:
+            return self.answer
 
 
 class QuotePost(db.Model):
@@ -116,12 +210,19 @@ class QuotePost(db.Model):
     text = db.Column(db.Text, nullable=False)
     source = db.Column(db.Text, nullable=True)
 
+    def readmore_caption(self):
+        try:
+            return self.source[0:self.source.index("<!-- more --")]
+        except ValueError:
+            return self.source
+
 
 class ConversationPost(db.Model):
     __tablename__ = "conv_posts"
     id = db.Column(db.Integer, db.ForeignKey("posts.id"), primary_key=True)
     base_post = db.relationship("Post", back_populates="conversation_post")
 
+    title = db.Column(db.Text, nullable=True)
     lines = db.relationship("ConversationLine")
 
 
@@ -130,7 +231,12 @@ class ConversationLine(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey("conv_posts.id"), primary_key=True)
     line_num = db.Column(db.Integer, primary_key=True)
 
+    label = db.Column(db.Text, nullable=True)
     text = db.Column(db.Text, nullable=False)
+
+    def name(self):
+        if self.label:
+            return str(self.label).replace(":", "")
 
 
 class VideoPost(db.Model):
@@ -154,6 +260,12 @@ class VideoPost(db.Model):
     # This may only be necessary for youtube links in the future
     player = db.Column(db.Text, nullable=True)
 
+    def readmore_caption(self):
+        try:
+            return self.caption[0:self.caption.index("<!-- more --")]
+        except ValueError:
+            return self.caption
+
 
 class AudioPost(db.Model):
     __tablename__ = "audio_posts"
@@ -170,4 +282,9 @@ class AudioPost(db.Model):
     track = db.Column(db.Text, nullable=True)
     year = db.Column(db.Integer, nullable=True)
 
+    def readmore_caption(self):
+        try:
+            return self.caption[0:self.caption.index("<!-- more --")]
+        except ValueError:
+            return self.caption
 

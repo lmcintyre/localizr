@@ -32,19 +32,6 @@ def main():
             add_post(post_element)
 
     db.session.commit()
-        # if post_element["type"] == "audio":
-        #     player_tag = post_element.find("audio-player")
-        #     if "tumblr_audio_player" in player_tag.text:
-        #         subsoup = BeautifulSoup(player_tag.text.strip(), "lxml")
-        #         src = subsoup.find("iframe")["src"]
-        #         audio_file = src[src.index("?audio_file=") + len("?audio_file="):]
-        #         audio_file = urllib.parse.unquote(audio_file)
-        #
-        #         if not audio_file.endswith(".mp3"):
-        #             identifier = audio_file[audio_file.index("tumblr_"):]
-        #             audio_file = f"https://a.tumblr.com/{identifier}o1.mp3"
-        #
-        #         print(audio_file)
 
 
 def add_post(post):
@@ -87,8 +74,8 @@ def add_post(post):
         title_tag = post.find("regular-title")
         body_tag = post.find("regular-body")
 
-        regular_post.regular_title = title_tag.text.strip() if title_tag else None
-        regular_post.regular_body = body_tag.text.strip() if body_tag else None
+        regular_post.title = title_tag.text.strip() if title_tag else None
+        regular_post.caption = body_tag.text.strip() if body_tag else None
 
         db.session.add(regular_post)
     elif post["type"] == "photo":
@@ -96,7 +83,7 @@ def add_post(post):
 
         caption_tag = post.find("photo-caption")
         if caption_tag:
-            photo_post.photo_caption = caption_tag.text.strip()
+            photo_post.caption = caption_tag.text.strip()
 
         # Only photosets have photo tags as children
         is_photoset = False if len(post.find_all("photo")) == 0 else True
@@ -126,6 +113,7 @@ def add_post(post):
 
         for photo in photos:
             db.session.add(photo)
+        photo_post.is_photoset = is_photoset
         photo_post.photos = photos
         db.session.add(photo_post)
     elif post["type"] == "link":
@@ -160,11 +148,16 @@ def add_post(post):
     elif post["type"] == "conversation":
         conv_post = ConversationPost(id=post["id"])
 
+        title_tag = post.find("conversation-title")
+
+        conv_post.title = title_tag.text.strip() if title_tag else None
+
         line_tags = post.find_all("line")
         lines = []
         for index, line_tag in enumerate(line_tags):
             line_text = line_tag.text.strip()
             this_line = ConversationLine(post_id=post["id"], line_num=index + 1, text=line_text)
+            this_line.label = line_tag.get("label")
             lines.append(this_line)
             db.session.add(this_line)
 

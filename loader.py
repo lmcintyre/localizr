@@ -1,11 +1,53 @@
-
 from bs4 import BeautifulSoup
-import urllib.parse
+
+from app import Runner, app
+from tqdm import tqdm
 from model import db, Tag, Post, RegularPost, PhotoPost, Photo, LinkPost, AnswerPost, QuotePost, ConversationPost, \
     ConversationLine, VideoPost, AudioPost
 
 # mini = True
 mini = False
+
+
+class Loader:
+    def __init__(self, filename):
+        self.filename = filename
+        self.soup = None
+        self.blog_name = None
+
+    def load_soup(self):
+        with open(self.filename, encoding="utf-8") as posts:
+            text = posts.read()
+        self.soup = BeautifulSoup(text, "xml")
+        self.blog_name = self.soup.find("post")["tumblelog"]
+        print(f"loaded {self.filename} for blog {self.blog_name}!")
+
+    def init_db(self):
+        Runner.create_database(self.blog_name)
+        print(f"created database {self.blog_name}.db!")
+
+    def count_post_types(self):
+        if self.soup is None:
+            raise ValueError("Loader's soup was None")
+
+        results = {}
+        for post in self.soup.find_all("post"):
+            value = results.get(post["type"])
+            if value is not None:
+                results[post["type"]] = value + 1
+            else:
+                results[post["type"]] = 1
+        return results
+
+    def insert_posts(self):
+        if self.soup is None:
+            raise ValueError("Loader's soup was None")
+
+        with app.app_context():
+            for post in tqdm(self.soup.find_all("post")):
+                if not Post.query.get(post["id"]):
+                    add_post(post)
+            db.session.commit()
 
 
 def main():

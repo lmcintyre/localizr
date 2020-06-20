@@ -1,5 +1,8 @@
 flask
 Flask-SQLAlchemy
+sqlalchemy
 BeautifulSoup4
 lxml
 timeago
+tqdm
+click

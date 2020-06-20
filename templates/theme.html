@@ -1,0 +1,628 @@
+{% macro readmore_link(show_readmore, has_readmore, permalink) %}
+    {% if show_readmore and has_readmore %}
+        <a href="{{ permalink }}" class="p">Read More &raquo;</a>
+    {% endif %}
+{% endmacro %}
+
+{# this makes captions in general far easier #}
+{% macro post_caption(post, show_readmore) %}
+    {% if post.type == "regular" and post.regular_post[0].caption %}
+        {% if show_readmore %}
+            {{ post.regular_post[0].readmore_caption()|safe }}
+        {% else %}
+            {{ post.regular_post[0].caption|safe }}
+        {% endif %}
+    {% elif post.type == "photo" and post.photo_post[0].caption %}
+        {% if show_readmore %}
+            {{ post.photo_post[0].readmore_caption()|safe }}
+        {% else %}
+            {{ post.photo_post[0].caption|safe }}
+        {% endif %}
+    {% elif post.type == "quote" and post.quote_post[0].source %}
+        {% if show_readmore %}
+            <p class="source">&ndash; {{ post.quote_post[0].readmore_caption()|safe }}</p>
+        {% else %}
+            <p class="source">&ndash; {{ post.quote_post[0].source|safe }}</p>
+        {% endif %}
+    {% elif post.type == "answer" and post.answer_post[0].answer %}
+        {% if show_readmore %}
+            {{ post.answer_post[0].readmore_caption()|safe }}
+        {% else %}
+            {{ post.answer_post[0].answer|safe }}
+        {% endif %}
+    {% elif post.type == "audio" and post.audio_post[0].caption %}
+        {% if show_readmore %}
+            {{ post.audio_post[0].readmore_caption()|safe }}
+        {% else %}
+            {{ post.audio_post[0].caption|safe }}
+        {% endif %}
+    {% elif post.type == "video" and post.video_post[0].caption %}
+        {% if show_readmore %}
+            {{ post.video_post[0].readmore_caption()|safe }}
+        {% else %}
+            {{ post.video_post[0].caption|safe }}
+        {% endif %}
+    {% endif %}
+
+    {{ readmore_link(show_readmore, post.has_readmore(), post.permalink()) }}
+
+{% endmacro %}
+
+
+
+<!DOCTYPE html>
+<!--
+	Theme: Ashley v0.5
+	Author: Jxnblk  [http://jxnblk.com]
+	For: Tumblr  [http://tumblr.com/]
+	Terms: Protected under Creative Commons.
+	-->
+
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<!-- Custom Variables -->
+		<meta name="image:Logo" content=""/>
+		<meta name="color:Background" content="#fff"/>
+		<meta name="color:Text" content="#444"/>
+		<meta name="color:Link" content="#09b"/>
+		<title>
+			Localizr
+		</title>
+
+		<style>
+			article,
+			aside,
+			details,
+			figcaption,
+			figure,
+			footer,
+			header,
+			hgroup,
+			main,
+			nav,
+			section,
+			summary {
+				display: block
+			}
+			audio,
+			canvas,
+			video {
+				display: inline-block
+			}
+			audio:not([controls]) {
+				display: none;
+				height: 0
+			}
+			[hidden] {
+				display: none
+			}
+			body,
+			h1,
+			h2,
+			h3,
+			h4,
+			h5,
+			h6,
+			p,
+			ul,
+			ol,
+			dl {
+				margin: 0;
+				padding: 0
+			}
+			a:focus {
+				outline: thin dotted
+			}
+			a:active,
+			a:hover {
+				outline: 0
+			}
+			b,
+			strong {
+				font-weight: bold
+			}
+			dfn {
+				font-style: italic
+			}
+			hr {
+				-moz-box-sizing: content-box;
+				box-sizing: content-box;
+				height: 0
+			}
+			mark {
+				background: #ff0;
+				color: #000
+			}
+			code,
+			kbd,
+			pre,
+			samp {
+				font-family: monospace, serif;
+				font-size: 1em
+			}
+			q {
+				quotes: "\201C""\201D""\2018""\2019"
+			}
+			small {
+				font-size: 80%
+			}
+			sub,
+			sup {
+				font-size: 75%;
+				line-height: 0;
+				position: relative;
+				vertical-align: baseline
+			}
+			sup {
+				top: -0.5em
+			}
+			sub {
+				bottom: -0.25em
+			}
+			img {
+				border: 0
+			}
+			svg:not(:root) {
+				overflow: hidden
+			}
+			figure {
+				margin: 0
+			}
+			fieldset {
+				border: 1px solid #c0c0c0;
+				margin: 0 2px;
+				padding: 0.35em 0.625em 0.75em
+			}
+			legend {
+				border: 0;
+				padding: 0
+			}
+			button,
+			input,
+			select,
+			textarea {
+				font-family: inherit;
+				font-size: 100%;
+				margin: 0
+			}
+			button,
+			input {
+				line-height: normal
+			}
+			button,
+			select {
+				text-transform: none
+			}
+			button,
+			html input[type="button"],
+			input[type="reset"],
+			input[type="submit"] {
+				-webkit-appearance: button;
+				cursor: pointer
+			}
+			button[disabled],
+			html input[disabled] {
+				cursor: default
+			}
+			input[type="checkbox"],
+			input[type="radio"] {
+				box-sizing: border-box;
+				padding: 0
+			}
+			input[type="search"] {
+				-webkit-appearance: textfield;
+				-moz-box-sizing: content-box;
+				-webkit-box-sizing: content-box;
+				box-sizing: content-box
+			}
+			input[type="search"]::-webkit-search-cancel-button,
+			input[type="search"]::-webkit-search-decoration {
+				-webkit-appearance: none
+			}
+			button::-moz-focus-inner,
+			input::-moz-focus-inner {
+				border: 0;
+				padding: 0
+			}
+			textarea {
+				overflow: auto;
+				vertical-align: top
+			}
+			table {
+				border-collapse: collapse;
+				border-spacing: 0
+			}
+			body {
+				color: {
+					color: Text
+				};
+				background: {
+					color: Background
+				};
+				font-family:'Arial', sans-serif;
+				font-size:100%;
+				line-height:1.5;
+				font-weight:400;
+			}
+			h1,
+			h2,
+			.h1,
+			.h2 {
+				font-weight: 400;
+				line-height: 1.25;
+				margin-top: .5em;
+			}
+			h1,
+			.h1 {
+				font-size: 32px;
+			}
+			h2,
+			.h2 {
+				font-size: 24px;
+			}
+			h3,
+			.h3 {
+				font-size: 20px;
+			}
+			h1+h2 {
+				margin-top: 0;
+			}
+			p,
+			.p,
+			ul,
+			ol {
+				font-size: 18px;
+			}
+			small,
+			.small {
+				font-size: 14px;
+			}
+			strong,
+			.strong {
+				font-weight: 700;
+			}
+			p,
+			ul,
+			ol {
+				margin-top: 1em;
+			}
+			@media screen and (min-width: 480px) {
+				h1,
+				.h1 {
+					font-size: 48px;
+				}
+				h2,
+				.h2 {
+					font-size: 32px;
+				}
+				h3,
+				.h3 {
+					font-size: 24px;
+				}
+				p,
+				.p,
+				ul,
+				ol {
+					font-size: 20px;
+				}
+				small,
+				.small {
+					font-size: 16px;
+				}
+			}
+			@media screen and (min-width: 640px) {
+				h1,
+				.h1 {
+					font-size: 64px;
+				}
+				h2,
+				.h2 {
+					font-size: 48px;
+				}
+				h3,
+				.h3 {
+					font-size: 32px;
+				}
+			}
+			.wrap {
+				width: 90%;
+				padding: 0 5%;
+				max-width: 48em;
+				margin: 0 auto;
+				overflow: hidden;
+			}
+			article {
+				margin-top: 4em;
+			}
+			a {
+				color: {
+					color: Link
+				}
+				;
+				text-decoration:none;
+			}
+			a:hover {
+				text-decoration: underline;
+			}
+			.headertext {
+				text-align: center;
+			}
+			header {
+				width: 90%;
+				padding: 2em 5% 0;
+				max-width: 48em;
+				margin: 0 auto;
+				overflow: hidden;
+			}
+			/*header:after {
+						clear: both;
+						content: '.';
+						display: block;
+						height: 0;
+						visibility: hidden;
+						}*/
+
+			.logo {
+				float: left;
+				margin-right: 1em;
+			}
+			header h1,
+			header p {
+				margin: 0;
+			}
+			header a,
+			a.post-title {
+				color: {
+					color: Text
+				}
+				;
+			}
+			a.post-title:hover {
+				{#text-align: center;#}
+				text-decoration: none;
+				color: {
+					color: Link
+				}
+				;
+			}
+			header a:hover {
+				text-decoration: none;
+			}
+            .odd {
+                border-radius: 8px;
+                background-color: #bbbbbb;
+            }
+			.post img,
+			.photoset,
+			.photoset img,
+			.photoset_row {
+				display: block;
+				margin-left: auto;
+				margin-right: auto;
+				max-width: 100%;
+			}
+			.post iframe,
+			.video object {
+				width: 100%;
+				max-width: 100%;
+			}
+			.post blockquote {
+				padding-left: 1em;
+				border-left: 1px solid #ddd;
+			}
+            .post ul {
+                list-style-type: none;
+            }
+			.post ul,
+			.post ol {
+				margin-left: 2em;
+			}
+			.post footer ul,
+			.post footer ol {
+				margin: 0;
+			}
+			.quote blockquote {
+				padding: 0;
+				border: none;
+				font-style: italic;
+			}
+			.quote .source {
+				text-align: right;
+			}
+			.post footer {
+				padding: 0;
+				margin-top: 1em;
+				color: #aaa;
+				font-style: italic;
+			}
+			.post footer a {
+				color: #aaa;
+			}
+			.post footer a:hover {
+				color: #999;
+			}
+			.post footer .source {
+				float: right;
+				margin-right: 0;
+			}
+			.post footer ul li {
+				display: inline-block;
+				margin-right: 1em;
+			}
+			.tags {
+				margin-top: 1em;
+			}
+			.pagination {
+				margin-top: 4em;
+				text-align: center;
+				line-height: 3em;
+				overflow: hidden;
+			}
+
+			.pagination a {
+				display: block;
+				height: 3em;
+				padding: 0 1em;
+				border-radius: 0.25em;
+			}
+			.pagination a:hover {
+				background: #eee;
+				text-decoration: none;
+			}
+			.pagination .previous {
+				float: left;
+			}
+			.pagination .next {
+				float: right;
+			}
+			footer.wrap {
+				padding-top: 2em;
+				padding-bottom: 2em;
+			}
+			ul.pages {
+				list-style: none;
+			}
+			ul.pages li {
+				display: inline-block;
+				margin-right: 1em;
+			}
+			ul.pages li a {
+				display: block;
+				height: 3em;
+				line-height: 3em;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1 class="headertext"><a href="/">localizr</a></h1>
+		</header>
+		<div class="content wrap">
+			<section class="posts">
+                {% if query %}
+                    <h2 class="h1">tag: #{{ query }}</h2>
+                {% elif type %}
+                    <h2 class="h1">type: {{ type }}</h2>
+{#                {% elif search %}#}
+{#                    <h2 class="h1">search: {{ search }}</h2>#}
+                {% endif %}
+
+                {% for post in posts %}
+                    <article class="post {{ post.type }}">
+                    {% if post.type == "regular" %}
+                        {% if post.regular_post[0].title %}
+                            <a href="{{ url_for("blog.post_page", post_id=post.id) }}" class="post-title">
+                                <h2>{{ post.regular_post[0].title|safe }}</h2>
+                            </a>
+                        {%  endif %}
+
+                        {{ post_caption(post, not request.path.startswith("/post/")) }}
+                    {% elif post.type == "photo" %}
+                        {% if post.photo_post[0].is_photoset %}
+                            {% for url in post.photo_post[0].highres_urls() %}
+                                <img src="{{ url }}"
+                                style="max-width: 700px;"/>
+                            {% endfor %}
+                        {% else %}
+                            <img src="{{ post.photo_post[0].highres_urls()[0] }}">
+                        {% endif %}
+
+                        {{ post_caption(post, not request.path.startswith("/post/")) }}
+                    {% elif post.type == "quote" %}
+                        <blockquote>
+							<p class="h3">&ldquo;{{ post.quote_post[0].text }}&rdquo;</p>
+                            {{ post_caption(post, not request.path.startswith("/post/")) }}
+						</blockquote>
+                    {% elif post.type == "link" %}
+                        <h2>
+							<a href="{{ post.link_post[0].url }}">{{ post.link_post[0].text }} &raquo;</a>
+						</h2>
+                        {% if post.link_post[0].desc %}
+                            {{ post.link_post[0].desc|safe }}
+						{% endif %}
+                    {% elif post.type == "conversation" %}
+                        {% if post.conversation_post[0].title %}
+							<h2>{{ post.conversation_post[0].title }}</h2>
+                        {% endif %}
+						<ul>
+                            {% for line in post.conversation_post[0].lines %}
+								<li class="{{ loop.cycle("odd", "even") }}">
+									{% if line.label %}
+										<b>{{ line.label }}</b>
+									{% endif %}
+									{{ line.text }}
+								</li>
+                            {% endfor %}
+						</ul>
+					{% elif post.type == "answer" %}
+                        <h2>
+                            Someone asked: <q>{{ post.answer_post[0].question|safe }}</q>
+                        </h2>
+                        {{ post_caption(post, not request.path.startswith("/post/")) }}
+                     {% elif post.type == "audio" %}
+{#						{AudioEmbed-640}#}
+                        {{ post.audio_post[0].player|safe }}
+                        {{ post_caption(post, not request.path.startswith("/post/")) }}
+                    {% elif post.type == "video" %}
+						{{ post.video_post[0].player|safe }}
+                        {{ post_caption(post, not request.path.startswith("/post/")) }}
+                    {% endif %}
+
+                    {% if post %}
+						<footer>
+						<ul class="small">
+							<li>
+								<a href="{{ post.permalink() }}"
+                                   title="{{ post.day_of_week() }}, {{ post.day_of_month() }} {{ post.month() }} {{ post.year() }}, {{ post.hour24() }}:{{ post.minute() }}:{{ post.seconds() }}">{{ post.timeago() }}</a>
+							</li>
+						</ul>
+                        {% if post.tags|length > 0  %}
+							<ul class="tags">
+							{% for tag in post.tags %}
+								<li>
+									<a href="{{ url_for("blog.tagged_page", query=tag.tag) }}">#{{ tag.tag }}</a>
+								</li>
+							{% endfor %}
+							</ul>
+						{% endif %}
+						</footer>
+                        {% endif %}
+				</article>
+            {% endfor %}
+
+        {% if pagination %}
+            <div class="pagination p">
+                <span class="previous">
+                    {% if pagination.has_prev %}
+                        {% if "tagged" in request.path %}
+                            <a href="{{ url_for("blog.tagged_page", query=query, page=pagination.prev_num) }}" class="previous">
+                        {% elif "type" in request.path %}
+                            <a href="{{ url_for("blog.type_page", post_type=type, page=pagination.prev_num) }}" class="previous">
+                        {% else %}
+                            <a href="{{ url_for("blog.base_page", page=pagination.prev_num) }}" class="previous">
+                        {% endif %}
+                        &laquo; Previous
+                        </a>
+                    {% endif %}
+                </span>
+                <span class="page-numbers">{{ pagination.page }}/{{ pagination.pages }}</span>
+                <span class="next">
+                    {% if pagination.has_next %}
+                        {% if "tagged" in request.path %}
+                            <a href="{{ url_for("blog.tagged_page", query=query, page=pagination.next_num) }}">
+                        {% elif "type" in request.path %}
+                            <a href="{{ url_for("blog.type_page", post_type=type, page=pagination.next_num) }}">
+                        {% else %}
+                            <a href="{{ url_for("blog.base_page", page=pagination.next_num) }}">
+                        {% endif %}
+                        Next &raquo;
+                        </a>
+                    {% endif %}
+                </span>
+            </div>
+        {% endif %}
+		</section>
+		</div>
+	</body>
+</html>

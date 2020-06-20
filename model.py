@@ -1,11 +1,9 @@
 from flask_sqlalchemy import SQLAlchemy
-from localizr import app
 from datetime import datetime
 import time
 import timeago
 
-
-db = SQLAlchemy(app)
+db = SQLAlchemy()
 
 
 class Post(db.Model):
@@ -49,8 +47,26 @@ class Post(db.Model):
     video_post = db.relationship("VideoPost", back_populates="base_post")
     audio_post = db.relationship("AudioPost", back_populates="base_post")
 
+    @staticmethod
+    def welcome():
+        ret = Post()
+        ret.unix_timestamp = datetime.now().timestamp()
+        ret.type = "regular"
+        content = RegularPost()
+        content.caption = \
+            """
+            <p>Welcome to localizr!</p>
+            
+            """
+
+        ret.regular_post = [content]
+        return ret
+
     def permalink(self):
-        return f"/post/{self.id}"
+        if self.id:
+            return f"/post/{self.id}"
+        else:
+            return f"/welcome"
 
     def has_readmore(self):
         more_flag = "<!-- more -->"
@@ -64,6 +80,9 @@ class Post(db.Model):
         elif self.type == "quote":
             if self.quote_post[0].source is not None:
                 return more_flag in self.quote_post[0].caption
+        elif self.type == "answer":
+            if self.answer_post[0].answer is not None:
+                return more_flag in self.answer_post[0].answer
         elif self.type == "link":
             if self.link_post[0].desc is not None:
                 return more_flag in self.link_post[0].desc

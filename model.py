@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import time
@@ -163,28 +165,85 @@ class PhotoPost(db.Model):
         except ValueError:
             return self.caption
 
-    def highres(self, offset):
-        for photo in self.photos:
-            if photo.offset == offset and photo.max_width == 1280:
-                return photo
-
-    def highres_urls(self):
+    def urls(self):
         ret = []
 
         for photo in self.photos:
-            if photo.max_width == 1280:
-                ret.append(photo.url)
+            ret.append(photo.url)
 
         return ret
+
+    def has_iframe(self):
+        return self.photos[0].row is not None
+
+    def iframe_height(self, width):
+        photos_per_row = defaultdict(list)
+        for photo in self.photos:
+            photos_per_row[photo.row].append(photo)
+
+        total_height = len(photos_per_row.keys()) * 10
+        for row in photos_per_row.keys():
+            row_len = len(photos_per_row[row])
+            new_width = (width - ((row_len - 1) * 10)) / row_len
+            smallest_photo_height = float("inf")
+            for photo in photos_per_row[row]:
+                if photo.height < smallest_photo_height:
+                    smallest_photo_height = photo.height
+                    row_height = int(round((photo.height / photo.width) * new_width))
+            total_height += row_height
+        return total_height
+
+    def process_photoset(self, width):
+        if not self.is_photoset:
+            raise ValueError("Not a photoset")
+
+        photos_per_row = defaultdict(list)
+        ret_rows = []
+
+        for photo in self.photos:
+            photos_per_row[photo.row].append(photo)
+
+        for row in photos_per_row.keys():
+            current_row = {"width": width}
+
+            row_len = len(photos_per_row[row])
+            new_width = (width - ((row_len - 1) * 10)) / row_len
+
+            smallest_photo_height = float("inf")
+
+            for photo in photos_per_row[row]:
+                if photo.height < smallest_photo_height:
+                    smallest_photo_height = photo.height
+                    current_row["height"] = int(round((photo.height / photo.width) * new_width))
+
+            for photo in photos_per_row[row]:
+                new_height = int(round((photo.height / photo.width) * new_width))
+                margin = (current_row["height"] - new_height) / 2
+
+                new_photo = {"width": new_width,
+                             "height": new_height,
+                             "topmargin": margin,
+                             "url": photo.url}
+
+                if current_row.get("photos") is None:
+                    current_row["photos"] = [new_photo]
+                else:
+                    current_row["photos"].append(new_photo)
+
+            ret_rows.append(current_row)
+        return ret_rows
 
 
 class Photo(db.Model):
     __tablename__ = "photos"
     post_id = db.Column(db.Integer, db.ForeignKey("photo_posts.id"), primary_key=True)
     offset = db.Column(db.Integer, primary_key=True)
-    max_width = db.Column(db.Integer, primary_key=True)
-    url = db.Column(db.Text, nullable=False)
+    row = db.Column(db.Integer, nullable=True)
 
+    height = db.Column(db.Integer, nullable=True)
+    width = db.Column(db.Integer, nullable=True)
+
+    url = db.Column(db.Text, nullable=False)
     caption = db.Column(db.Text, nullable=True)
 
     photo_post = db.relationship("PhotoPost", back_populates="photos")

@@ -6,3 +6,4 @@ lxml
 timeago
 tqdm
 click
+requests

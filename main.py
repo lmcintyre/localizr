@@ -39,6 +39,7 @@ def main():
     parser.add_argument("-p", "--fix-photosets", action="store_true",
                         help="""
                                 Load photosets properly by connecting to Tumblr to get the information for their layout.
+                                Without this, photosets will consist of the photos stacked on top of each other.
                                 Can only be specified when loading a blog. Reduces load speed considerably. 
                              """)
 
@@ -59,7 +60,7 @@ def main():
             for ptype in counts.keys():
                 print(f"found {counts[ptype]} {ptype} post(s)")
             l.init_db()
-            l.insert_posts()
+            l.insert_posts(args.fix_photosets)
 
 
 

@@ -1,3 +1,4 @@
+import requests
 from bs4 import BeautifulSoup
 
 from app import Runner, app
@@ -39,14 +40,14 @@ class Loader:
                 results[post["type"]] = 1
         return results
 
-    def insert_posts(self):
+    def insert_posts(self, fix_photosets, blog_name=""):
         if self.soup is None:
             raise ValueError("Loader's soup was None")
 
         with app.app_context():
             for post in tqdm(self.soup.find_all("post")):
                 if not Post.query.get(post["id"]):
-                    add_post(post)
+                    add_post(post, fix_photosets, blog_name)
             db.session.commit()
 
 
@@ -76,7 +77,39 @@ def main():
     db.session.commit()
 
 
-def add_post(post):
+def get_photoset_iframe_url(post, blog_name=""):
+    # format = "https://tacticalravioli.tumblr.com/post/93759219776/photoset_iframe/tacticalravioli/tumblr_n9rti43cev1swkprh/700/false"
+    iframe_format = "https://{}.tumblr.com/post/{}/photoset_iframe/{}/{}/500/false"
+    full_url = post.find("photo-url").text.strip()
+    url_file = full_url[full_url.index("tumblr_"):]
+    media_key = url_file[0:url_file.rindex("o")]
+    if not blog_name:
+        blog_name = post["tumblelog"]
+    return iframe_format.format(blog_name, post["id"], blog_name, media_key)
+
+
+def get_image_rows(post, blog_name=""):
+    iframe_url = get_photoset_iframe_url(post, blog_name)
+    try:
+        page = requests.get(iframe_url).content
+    except requests.exceptions.RequestException:
+        print(f"couldn't load photoset data for post {post['id']}")
+        return None
+
+    soup = BeautifulSoup(page, "xml")
+    row_counts = []
+    for tag in soup.select(".photoset_row"):
+        for css_class in tag["class"].split():
+            if "row_" in css_class:
+                row_counts.append(int(css_class[css_class.rindex("_") + 1:]))
+    image_rows = []
+    for row_index, val in enumerate(row_counts):
+        for index in range(0, val):
+            image_rows.append(row_index + 1)
+    return image_rows
+
+
+def add_post(post, fix_photosets, blog_name=""):
     tag_list = []
     for tag_element in post.find_all("tag"):
         this_tag = Tag(post_id=post["id"], tag=tag_element.text.strip())
@@ -136,22 +169,35 @@ def add_post(post):
             # Here, we ignore the base photo-url tags
             photo_tags = post.find_all("photo")
 
+            if fix_photosets:
+                rows_per_image = get_image_rows(post, blog_name)
+
             for i, photo_tag in enumerate(photo_tags):
                 photo_url_tags = photo_tag.find_all("photo-url")
 
                 for img in photo_url_tags:
-                    img_url = img.text.strip()
-                    caption = photo_tag["caption"] or None
-                    this_photo = Photo(post_id=post["id"], caption=caption, offset=i + 1,
-                                       max_width=img["max-width"], url=img_url)
-                    photos.append(this_photo)
+                    if img["max-width"] == "1280":
+                        img_url = img.text.strip()
+                        caption = photo_tag["caption"] or None
+                        this_photo = Photo(post_id=post["id"],
+                                           caption=caption,
+                                           offset=i + 1,
+                                           width=photo_tag["width"],
+                                           height=photo_tag["height"],
+                                           url=img_url)
+
+                        if fix_photosets and rows_per_image is not None:
+                            this_photo.row = rows_per_image[i]
+
+                        photos.append(this_photo)
         else:
             photo_url_tags = post.find_all("photo-url")
 
             for img in photo_url_tags:
-                img_url = img.text.strip()
-                this_photo = Photo(post_id=post["id"], offset=0, max_width=img["max-width"], url=img_url)
-                photos.append(this_photo)
+                if img["max-width"] == "1280":
+                    img_url = img.text.strip()
+                    this_photo = Photo(post_id=post["id"], offset=0, url=img_url)
+                    photos.append(this_photo)
 
         for photo in photos:
             db.session.add(photo)
@@ -211,9 +257,9 @@ def add_post(post):
         caption_tag = post.find("video-caption")
         player_tag = post.find("video-player")
         video_post.caption = caption_tag.text.strip() if caption_tag else None
-        video_post.player = player_tag.text.strip() if player_tag else None
 
         if post.find("revision") is None:
+            video_post.player = player_tag.text.strip() if player_tag else None
             video_post.source = post.find("video-source").text.strip()
         else:
             content_tag = post.find("content-type")
@@ -229,6 +275,18 @@ def add_post(post):
             video_post.height = height_tag.text.strip() if height_tag else None
             video_post.duration = duration_tag.text.strip() if duration_tag else None
             video_post.revision = revision_tag.text.strip() if revision_tag else None
+
+            soup2 = BeautifulSoup(player_tag.text.strip(), "html.parser")
+
+            # this adds the necessary attribute to display video controls
+            soup2.find("video")["controls"] = None
+
+            src_tag = soup2.find("source")
+            src_text = src_tag["src"]
+            new_src = get_src_url(src_text, video_post.extension)
+            src_tag["src"] = new_src
+            video_post.player = str(soup2)
+
         db.session.add(video_post)
     elif post["type"] == "audio":
         audio_post = AudioPost(id=post["id"])
@@ -254,6 +312,16 @@ def add_post(post):
 
     # db.session.commit()
 
+
+def get_src_url(old_src, extension):
+    va_format = "https://va.media.tumblr.com/{}.{}"
+    src = old_src[old_src.index("tumblr_"):]
+    try:
+        src = src[0:src.rindex("/")]
+    except ValueError:
+        pass
+
+    return va_format.format(src, extension)
 
 if __name__ == "__main__":
     main()

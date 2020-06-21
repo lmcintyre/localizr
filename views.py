@@ -22,6 +22,14 @@ def base_page(page):
     return render_template("theme.html", posts=pagination.items, pagination=pagination)
 
 
+@blog.route("/post/<int:post_id>/photoset_iframe/", defaults={"width": 500})
+@blog.route("/post/<int:post_id>/photoset_iframe/<int:width>")
+def photoset_iframe(post_id, width):
+    this_post = Post.query.get(post_id)
+    this_post.photo_post[0].process_photoset(width)
+    return render_template("photoset_iframe.html", post=this_post, width=width)
+
+
 @blog.route("/tagged/<string:query>", defaults={"page": 1})
 @blog.route("/tagged/<string:query>/page/<int:page>")
 def tagged_page(query, page):

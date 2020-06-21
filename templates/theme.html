@@ -520,12 +520,22 @@
                         {{ post_caption(post, not request.path.startswith("/post/")) }}
                     {% elif post.type == "photo" %}
                         {% if post.photo_post[0].is_photoset %}
-                            {% for url in post.photo_post[0].highres_urls() %}
-                                <img src="{{ url }}"
-                                style="max-width: 700px;"/>
-                            {% endfor %}
+                            {% if post.photo_post[0].has_iframe() %}
+                                <iframe class="photoset"
+                                        scrolling="no"
+                                        frameborder="0"
+                                        height="{{ post.photo_post[0].iframe_height(700) }}"
+                                        width="700"
+                                        style="border:0px; background-color:transparent; overflow:hidden;"
+                                        src="{{ url_for("blog.photoset_iframe", post_id=post.id, width=700) }}"></iframe>
+                            {% else %}
+                                {% for url in post.photo_post[0].urls() %}
+                                    <img src="{{ url }}"
+                                    style="max-width: 700px;"/>
+                                {% endfor %}
+                            {% endif %}
                         {% else %}
-                            <img src="{{ post.photo_post[0].highres_urls()[0] }}">
+                            <img src="{{ post.photo_post[0].urls()[0] }}">
                         {% endif %}
 
                         {{ post_caption(post, not request.path.startswith("/post/")) }}

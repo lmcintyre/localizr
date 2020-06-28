@@ -2,23 +2,26 @@ from flask import Flask
 from model import db
 import os
 import views
+import sys
 import webbrowser
+import click
+
+basepath = ""
+if getattr(sys, "frozen", False):
+    basepath = os.path.dirname(sys.executable)
+
 
 # I LOVE this.
-import click
+def echo(text, file=None, nl=None, err=None, color=None, **styles):
+    pass
 
 
 def secho(text, file=None, nl=None, err=None, color=None, **styles):
     pass
 
 
-def echo(text, file=None, nl=None, err=None, color=None, **styles):
-    pass
-
-
 click.echo = echo
 click.secho = secho
-
 # end workaround
 
 app = Flask(__name__)
@@ -27,11 +30,11 @@ app = Flask(__name__)
 class Runner:
     def __init__(self, db_filename):
         if not os.path.exists(f"{db_filename}.db"):
-            print(f"Couldn't find file {db_filename}.")
-            print("Did you load your blog using --load?")
-            return
+            print(f"couldn't find file {db_filename}.")
+            print("did you load your blog using --load?")
+            sys.exit(1)
         self.blog_name = db_filename
-        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_filename}.db"
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(basepath, db_filename)}.db"
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     def run_site(self):
@@ -47,7 +50,7 @@ class Runner:
 
     @staticmethod
     def create_database(db_filename):
-        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_filename}.db"
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(basepath, db_filename)}.db"
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
         db.init_app(app)
         db.create_all(app=app)

@@ -492,6 +492,21 @@
 				height: 3em;
 				line-height: 3em;
 			}
+            .audio_table {
+                display: flex;
+                justify-content: space-evenly;
+                flex-direction: column-reverse;
+            }
+            .audio_video_table {
+                display: flex;
+                justify-content: space-evenly;
+            }
+            .audio_player_video {
+                width: 400px;
+            }
+            audio {
+                width: 400px;
+            }
 		</style>
 	</head>
 	<body>
@@ -516,7 +531,6 @@
                                 <h2>{{ post.regular_post[0].title|safe }}</h2>
                             </a>
                         {%  endif %}
-
                         {{ post_caption(post, not request.path.startswith("/post/")) }}
                     {% elif post.type == "photo" %}
                         {% if post.photo_post[0].is_photoset %}
@@ -572,7 +586,21 @@
                         {{ post_caption(post, not request.path.startswith("/post/")) }}
                      {% elif post.type == "audio" %}
 {#						{AudioEmbed-640}#}
-                        {{ post.audio_post[0].player|safe }}
+                        {% if not post.audio_post[0].is_local() %}
+                            {{ post.audio_post[0].player|safe }}
+                        {% else %}
+                            <div class="{{ post.audio_post[0].table_class() }}">
+                                {{ post.audio_post[0].player|safe }}
+                                <div>
+                                {% if post.audio_post[0].title %}
+                                    <h3 class="title">{{ post.audio_post[0].title }}</h3>
+                                {% endif %}
+                                {% if post.audio_post[0].artist %}
+                                    <strong class="artist">{{ post.audio_post[0].artist }}</strong>
+                                {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
                         {{ post_caption(post, not request.path.startswith("/post/")) }}
                     {% elif post.type == "video" %}
 						{{ post.video_post[0].player|safe }}
@@ -606,9 +634,19 @@
                 <span class="previous">
                     {% if pagination.has_prev %}
                         {% if "tagged" in request.path %}
-                            <a href="{{ url_for("blog.tagged_page", query=query, page=pagination.prev_num) }}" class="previous">
+                            {% if "self" in request.path %}
+                                <a href="{{ url_for("blog.self_page", query=query, page=pagination.prev_num) }}" class="previous">
+                            {% else %}
+                                <a href="{{ url_for("blog.tagged_page", query=query, page=pagination.prev_num) }}" class="previous">
+                            {% endif %}
                         {% elif "type" in request.path %}
-                            <a href="{{ url_for("blog.type_page", post_type=type, page=pagination.prev_num) }}" class="previous">
+                            {% if "self" in request.path %}
+                                <a href="{{ url_for("blog.self_page", post_type=type, page=pagination.prev_num) }}" class="previous">
+                            {% else %}
+                                <a href="{{ url_for("blog.type_page", post_type=type, page=pagination.prev_num) }}" class="previous">
+                            {% endif %}
+                        {% elif "self" in request.path %}
+                            <a href="{{ url_for("blog.self_page", page=pagination.prev_num) }}" class="previous">
                         {% else %}
                             <a href="{{ url_for("blog.base_page", page=pagination.prev_num) }}" class="previous">
                         {% endif %}
@@ -620,11 +658,21 @@
                 <span class="next">
                     {% if pagination.has_next %}
                         {% if "tagged" in request.path %}
-                            <a href="{{ url_for("blog.tagged_page", query=query, page=pagination.next_num) }}">
+                            {% if "self" in request.path %}
+                                <a href="{{ url_for("blog.self_page", query=query, page=pagination.next_num) }}" class="previous">
+                            {% else %}
+                                <a href="{{ url_for("blog.tagged_page", query=query, page=pagination.next_num) }}" class="previous">
+                            {% endif %}
                         {% elif "type" in request.path %}
-                            <a href="{{ url_for("blog.type_page", post_type=type, page=pagination.next_num) }}">
+                            {% if "self" in request.path %}
+                                <a href="{{ url_for("blog.self_page", post_type=type, page=pagination.next_num) }}" class="previous">
+                            {% else %}
+                                <a href="{{ url_for("blog.type_page", post_type=type, page=pagination.next_num) }}" class="previous">
+                            {% endif %}
+                        {% elif "self" in request.path %}
+                            <a href="{{ url_for("blog.self_page", page=pagination.next_num) }}" class="previous">
                         {% else %}
-                            <a href="{{ url_for("blog.base_page", page=pagination.next_num) }}">
+                            <a href="{{ url_for("blog.base_page", page=pagination.next_num) }}" class="previous">
                         {% endif %}
                         Next &raquo;
                         </a>

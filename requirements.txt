@@ -7,3 +7,6 @@ timeago
 tqdm
 click
 requests
+Pillow
+eyed3
+pyinstaller

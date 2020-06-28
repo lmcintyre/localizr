@@ -4,37 +4,39 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import time
 import timeago
+import timeago.locales.en
 
 db = SQLAlchemy()
 
 
 class Post(db.Model):
     __tablename__ = "posts"
-    # Common fields
+    # Common fields, commented out unneeded ones in order to save db space
+    # Can uncomment here and in loader.py if you want these fields
     id = db.Column(db.Integer, primary_key=True)                # Post id
-    url = db.Column(db.Text, nullable=False)                    # Post original url
-    url_with_slug = db.Column(db.Text, nullable=False)          # Post original url with slug
-    slug = db.Column(db.Text, nullable=False)                   # Post slug
+    # url = db.Column(db.Text, nullable=False)                    # Post original url
+    # url_with_slug = db.Column(db.Text, nullable=False)          # Post original url with slug
+    # slug = db.Column(db.Text, nullable=False)                   # Post slug
     type = db.Column(db.Text, nullable=False)                   # Post type (photo, regular, video, answer, link, conversation, quote)
-    state = db.Column(db.Text, nullable=False)                  # Post state (published, submission)
-    date_gmt = db.Column(db.Text, nullable=False)               # GMT posting time, string, "YYYY-MM-DD HH:MM:SS GMT"
-    date = db.Column(db.Text, nullable=False)                   # local posting time, string, "DAY, DD MON YYYY HH:MM:SS"
+    # state = db.Column(db.Text, nullable=False)                  # Post state (published, submission)
+    # date_gmt = db.Column(db.Text, nullable=False)               # GMT posting time, string, "YYYY-MM-DD HH:MM:SS GMT"
+    # date = db.Column(db.Text, nullable=False)                   # local posting time, string, "DAY, DD MON YYYY HH:MM:SS"
     unix_timestamp = db.Column(db.Integer, nullable=False)      # Unix post time
-    format = db.Column(db.Text, nullable=False)                 # either "html" or "markdown". TODO: figure out how it works
-    reblog_key = db.Column(db.Text, nullable=False)             # must be used internally, we keep it (for now) but we don't care
+    # format = db.Column(db.Text, nullable=False)                 # either "html" or "markdown". TODO: figure out how it works
+    # reblog_key = db.Column(db.Text, nullable=False)             # must be used internally, we keep it (for now) but we don't care
     is_reblog = db.Column(db.Text, nullable=False)              # was the post a reblog? "true" or "false"
     tumblelog = db.Column(db.Text, nullable=False)              # the blog posted to
     tags = db.relationship("Tag")
 
     # Everything from here on is optional
-    private = db.Column(db.Text, nullable=False)                # if the post is private or not
+    # private = db.Column(db.Text, nullable=False)                # if the post is private or not
 
     # Photo fields
-    width = db.Column(db.Integer, nullable=True)                # Image width
-    height = db.Column(db.Integer, nullable=True)               # Image height
+    # width = db.Column(db.Integer, nullable=True)                # Image width
+    # height = db.Column(db.Integer, nullable=True)               # Image height
 
     # Video fields
-    direct_video = db.Column(db.Text, nullable=True)            # Unknown, is always "true" in my blog
+    # direct_video = db.Column(db.Text, nullable=True)            # Unknown, is always "true" in my blog
 
     # Audio fields
     audio_plays = db.Column(db.Integer, nullable=True)             # Number of plays on tracks
@@ -50,25 +52,67 @@ class Post(db.Model):
     audio_post = db.relationship("AudioPost", back_populates="base_post")
 
     @staticmethod
+    def not_found(id):
+        ret = Post()
+        ret.id = id
+        ret.unix_timestamp = datetime.now().timestamp()
+        ret.type = "regular"
+        content = RegularPost()
+        content.title = "Not Found"
+        content.caption = "<p>The URL you requested could not be found.</p>"
+        ret.regular_post = [content]
+        return ret
+
+    @staticmethod
     def welcome():
         ret = Post()
+        ret.id = "welcome"
         ret.unix_timestamp = datetime.now().timestamp()
         ret.type = "regular"
         content = RegularPost()
         content.caption = \
             """
             <p>Welcome to localizr!</p>
-            
+            <p>This example post is included with localizr, and is not part of your blog. It'll show you how to use
+            all of localizr's features to view the posts of a loaded blog.</p>
+            <p>To start, localizr already supports the common Tumblr features such as tagged posts. Maybe your blog
+            has a "me" tag? Try going to this link: <a href="/tagged/me">/tagged/me</a>.</p>
+            <p>You can access any tag the same way, including tags with spaces and other symbols.</p>
+            <p>Obviously, pages work - you can go through all of the pages on anything that has them. This "post"
+            behaves like any other post, so there's no pages at the bottom here.</p>
+            <p>localizr has a few extra tricks up its sleeve, self and type. You may already have tagged all of your
+            posts of a certain type, i.e. "video" or "audio", but on localizr, you can just go to
+            <a href="/type/video">/type/video</a> or <a href="/type/audio">/type/audio</a>.</p>
+            <p>The valid post types are:
+            <ul>
+                <li>"regular" (text posts)</li>
+                <li>answer</li>
+                <li>conversation</li>
+                <li>link</li>
+                <li>photo</li>
+                <li>photoset</li>
+                <li>quote</li>
+                <li>audio</li>
+                <li>video</li>
+            </ul>
+            <p>localizr's next feature is <a href="/self">/self</a>. This link will filter posts to only show posts that
+            you made, excluding all reblogs. This is an easy way to go through all of your original content. In
+            addition, you can combine self and tagged, or self and type. If you want to find posts you've made
+            and tagged "Pokemon", simply go to <a href="/self/tagged/pokemon">/self/tagged/pokemon</a>. If you want
+            to find audio posts that you've made, you can go to <a href="/self/type/audio">/self/type/audio</a>!</p>
+            <p>That's about it. Except there's one more thing. localizr is open source, so if it doesn't do something
+            that you want it to do - you or somebody else with programming knowledge can add a new feature.</p>
+            <p>That's actually it, so click "localizr" at the top of this page to go to your blog.</p>
             """
 
         ret.regular_post = [content]
         return ret
 
     def permalink(self):
-        if self.id:
+        if isinstance(self.id, int):
             return f"/post/{self.id}"
         else:
-            return f"/welcome"
+            return f"/{self.id}"
 
     def has_readmore(self):
         more_flag = "<!-- more -->"
@@ -244,6 +288,7 @@ class Photo(db.Model):
     width = db.Column(db.Integer, nullable=True)
 
     url = db.Column(db.Text, nullable=False)
+    # local_url = db.Column(db.text, nullable=True)
     caption = db.Column(db.Text, nullable=True)
 
     photo_post = db.relationship("PhotoPost", back_populates="photos")
@@ -366,3 +411,11 @@ class AudioPost(db.Model):
         except ValueError:
             return self.caption
 
+    def is_local(self):
+        return "<video " in self.player or "<audio " in self.player
+
+    def table_class(self):
+        if "<video " in self.player:
+            return "audio_video_table"
+        else:
+            return "audio_table"

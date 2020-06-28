@@ -63,60 +63,16 @@
     </style>
 </head>
 <body>
-
-<div id="photoset_{{ post.id }}" class="photoset">
-    {% for row in post.photo_post[0].process_photoset(width) %}
-    <div class="photoset_row photoset_row_{{ row["photos"]|length }}" style="height:{{ row["height"] }}px; width:{{ row["width"] }}px;">
-        {% for photo in row["photos"] %}
-        <a href="{{ photo["url"] }}" class="photoset_photo">
-            <img style="margin-top:{{ photo["topmargin"] }}px;width:{{ photo["width"] }}px;" src="{{ photo["url"] }}"/>
-        </a>
+    <div id="photoset_{{ post.id }}" class="photoset">
+        {% for row in post.photo_post[0].process_photoset(width) %}
+        <div class="photoset_row photoset_row_{{ row["photos"]|length }}" style="height:{{ row["height"] }}px; width:{{ row["width"] }}px;">
+            {% for photo in row["photos"] %}
+                <a href="{{ photo["url"] }}" class="photoset_photo">
+                    <img style="margin-top:{{ photo["topmargin"] }}px;width:{{ photo["width"] }}px;" src="{{ photo["url"] }}"/>
+                </a>
+            {% endfor %}
+        </div>
         {% endfor %}
     </div>
-    {% endfor %}
-
-{#<div id="photoset_{{ post.id }}" class="photoset">#}
-{#    {% for row in post.photo_post[0].process_photoset(500) %}#}
-{#    <div class="photoset_row photoset_row_{{ row["photos"]|length }}" style="height:{{ row["height"] }}px; width:{{ row["width"] }}px;">#}
-{#        {% for photo in row["photos"] %}#}
-{#        <a href="https://66.media.tumblr.com/f403445605b6e5fd2f659630615a23b9/tumblr_n08lpgnLBd1rehm7co10_250.gifv" class="photoset_photo"> {# 216 x 270 #}
-{#            <img style="margin-top:-20px;width:160px;" src="https://66.media.tumblr.com/f403445605b6e5fd2f659630615a23b9/tumblr_n08lpgnLBd1rehm7co10_250.gifv"/>#}
-{#        </a>#}
-{#        <a href="https://66.media.tumblr.com/a9b62ac75c546cdd8dfca1ad2c8db870/tumblr_n08lpgnLBd1rehm7co8_250.gifv" class="photoset_photo">  {# 233 x 269 #}
-{#            <img style="margin-top:-12px;width:160px;" src="https://66.media.tumblr.com/a9b62ac75c546cdd8dfca1ad2c8db870/tumblr_n08lpgnLBd1rehm7co8_250.gifv" />#}
-{#        </a>#}
-{#        <a href="https://66.media.tumblr.com/3f6dad253329cb26781a0ad484950b0f/tumblr_n08lpgnLBd1rehm7co2_400.gifv" class="photoset_photo"> {# 250 x 251 #}
-{#            <img style="width:160px;" src="https://66.media.tumblr.com/3f6dad253329cb26781a0ad484950b0f/tumblr_n08lpgnLBd1rehm7co2_250.gifv"/>#}
-{#        </a>#}
-{#    </div>#}
-{#    {% endfor %}#}
-{#    <div class="photoset_row" style="height:273px; width:500px;">#}
-{#        <a href="https://66.media.tumblr.com/3dfe3d0c9886258c074500e5e7c40af7/tumblr_n08lpgnLBd1rehm7co3_250.gifv" class="photoset_photo">#}
-{#            <img style="width:245px;" src="https://66.media.tumblr.com/3dfe3d0c9886258c074500e5e7c40af7/tumblr_n08lpgnLBd1rehm7co3_250.gifv"/>#}
-{#        </a>#}
-{#        <a href="https://66.media.tumblr.com/f11967f9b48b7549db28f33522abd470/tumblr_n08lpgnLBd1rehm7co4_250.gifv" class="photoset_photo">#}
-{#            <img style="margin-top:-36px;width:245px;" src="https://66.media.tumblr.com/f11967f9b48b7549db28f33522abd470/tumblr_n08lpgnLBd1rehm7co4_250.gifv"/>#}
-{#        </a>#}
-{#    </div>#}
-{#    <div class="photoset_row" style="height:189px; width:500px;">#}
-{#        <a href="https://66.media.tumblr.com/35d26c3d8c4fbf6fbf8cc5b8f26a6785/tumblr_n08lpgnLBd1rehm7co7_400.gifv" class="photoset_photo">#}
-{#            <img style="margin-top:-18px;width:245px;" src="https://66.media.tumblr.com/35d26c3d8c4fbf6fbf8cc5b8f26a6785/tumblr_n08lpgnLBd1rehm7co7_250.gifv"/>#}
-{#        </a>#}
-{#        <a href="https://66.media.tumblr.com/b11647116e667a4981ea44f23fe53938/tumblr_n08lpgnLBd1rehm7co5_500.gifv" class="photoset_photo">#}
-{#            <img style="width:245px;" src="https://66.media.tumblr.com/b11647116e667a4981ea44f23fe53938/tumblr_n08lpgnLBd1rehm7co5_250.gifv" />#}
-{#        </a>#}
-{#    </div>#}
-{#    <div class="photoset_row" style="height:191px; width:500px;">#}
-{#        <a href="https://66.media.tumblr.com/3fca67b99f603f004a3d4e73f7a5ca12/tumblr_n08lpgnLBd1rehm7co6_250.gifv" class="photoset_photo">#}
-{#            <img style="margin-top:-3px; width:160px;" src="https://66.media.tumblr.com/3fca67b99f603f004a3d4e73f7a5ca12/tumblr_n08lpgnLBd1rehm7co6_250.gifv"/>#}
-{#        </a>#}
-{#        <a href="https://66.media.tumblr.com/b0a2ede58b252bf9c2d294bb037df21a/tumblr_n08lpgnLBd1rehm7co1_250.gifv" class="photoset_photo">#}
-{#            <img style="margin-top:-23px;width:160px;" src="https://66.media.tumblr.com/b0a2ede58b252bf9c2d294bb037df21a/tumblr_n08lpgnLBd1rehm7co1_250.gifv"/>#}
-{#        </a>#}
-{#        <a href="https://66.media.tumblr.com/40a534d350ef773ed242d3987ce9f699/tumblr_n08lpgnLBd1rehm7co9_400.gifv" class="photoset_photo">#}
-{#            <img style="width:160px;" src="https://66.media.tumblr.com/40a534d350ef773ed242d3987ce9f699/tumblr_n08lpgnLBd1rehm7co9_250.gifv"/>#}
-{#        </a>#}
-{#    </div>#}
-{#</div>#}
 </body>
 </html>

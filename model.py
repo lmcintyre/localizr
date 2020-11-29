@@ -2,6 +2,8 @@ from collections import defaultdict
 
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from hashlib import blake2b
+import os
 import time
 import timeago
 import timeago.locales.en
@@ -419,3 +421,29 @@ class AudioPost(db.Model):
             return "audio_video_table"
         else:
             return "audio_table"
+
+
+class MediaEntry(db.Model):
+    __tablename__ = "media_entries"
+    id = db.Column(db.String, nullable=False, primary_key=True)
+    file_hash = db.Column(db.String, nullable=False)
+    data = db.relationship("Media")
+
+
+class Media(db.Model):
+    __tablename__ = "media"
+    file_hash = db.Column(db.String, db.ForeignKey("media_entries.file_hash"), primary_key=True)
+    data = db.Column(db.BLOB, nullable=False)
+
+
+def get_file_hash(path):
+    hasher = blake2b(digest_size=16)
+    size = os.stat(path).st_size
+    with open(path, "rb") as file:
+        while size >= 8192:
+            current_data = file.read(8192)
+            hasher.update(current_data)
+            size = size - 8192
+        current_data = file.read(size)
+        hasher.update(current_data)
+        return hasher.hexdigest()

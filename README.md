@@ -11,7 +11,7 @@ The current state of localizr on the development side is as follows:
  - [x] More features than a Tumblr blog with the addition of self/ and type/ endpoints to display only original posts, or sort by post type
  - [x] Full support for changed blog URLs
  - [ ] Fast loading using parallel requests
- - [ ] Insert images into database for monolithic blog storage
+ - [x] Insert media into database for monolithic blog storage
  - [ ] Theme support
  - [ ] A user friendly GUI
  - [ ] Support for the messages.xml with an interface for viewing messages
@@ -22,9 +22,9 @@ As of now, development is relatively finished outside of bug fixes. Unfinished f
 localizr comes with a simple command-line interface.
 You should obtain your posts.xml file from the zip file you downloaded from Tumblr of your blog archive. You can load a blog by typing:
 ```
-localizr.exe -l (posts.xml) [--online | --offline [blog_name]] [--fix-photosets [blog_name]]
+localizr.exe -l posts.xml [--online | --offline [blog_name]] [--monolithic] [--fix-photosets [blog_name]]
 ```
-where `-l` means "load", `(posts.xml)` is the required path to the posts.xml file of the blog you want to load, `[--online | --offline [blog_name]]` are optional, as online mode is the default, and `--fix-photosets` is to process accurate photoset arrangements, which is an option because it requires an internet connection and reduces speed.
+where `-l` means "load", `(posts.xml)` is the required path to the posts.xml file of the blog you want to load, `[--online | --offline [blog_name]]` are optional, as online mode is the default, and `--fix-photosets` is to process accurate photoset arrangements, which is an option because it requires an internet connection and reduces speed. `--monolithic` is also an option for blog storage, but limits your ability to fix your blog after localizr loads it.
 
 Loading a blog will create a "blogname.db" file in the same folder as localizr.
 To display that blog as a website, run:
@@ -38,6 +38,8 @@ Online mode exists for users simply looking to access their blog posts in a user
 ## Offline mode
 Offline mode exists so that a user can create a full copy of their blog as it once was, including reblogged media such as images, video, and audio. In online mode, audio and video posts still access Tumblr's servers to obtain media. In offline mode, the localizr website is completely standalone - and will function the same even if you don't have an internet connection, after loading is done, as long as the media folder is in the same folder as localizr.exe. In addition, the media folder should be in the same folder as localizr.exe to load the blog initially, and localizr will not clean up the media folder afterwards. Because some media may still be missing or incorrectly downloaded, it is up to the user to delete the original media folder as to prevent data loss. This is an important step because the media folder can be tens of gigabytes in size.
 Offline mode decreases load speed drastically because the blog download does not include all of the media that it should, so localizr downloads that media from Tumblr's servers, provided it's still online.
+## Monolithic mode
+Monolithic mode is another form of offline mode. Rather than creating a media directory and serving files from there, monolithic mode will place all media into the database used for post content. With this option, you will not have access to the data that localizr serves as media - and you will not be able to fix any media. However, when storing your blog, the only two files you need would be localizr and the database.
 ## Photoset arrangements
 Photosets are a huge part of Tumblr. In order to get them to work properly, localizr needs to know which row which image is on in the photoset. Unfortunately, this information is not included in the posts.xml file Tumblr includes with blog downloads, so the `--fix-photosets` option tells localizr to load the information for each photoset from Tumblr.
 

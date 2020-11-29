@@ -45,6 +45,18 @@ def main():
                                 with this option, or it will not work.
                              """
                         )
+    parser.add_argument("-m", "--monolithic",
+                        action="store_true",
+                        help="""
+                                Another form of offline method - offline mode must be enabled.
+                                Inserts all images, videos, and audio files into the database file along with your
+                                posts. If this is enabled, you will not be able to fix media that was not available.
+                                The advantage with this option is that you will no longer need the media folder,
+                                everything will be kept in the database file. On the other hand, you will not be able
+                                to fix missing or broken media, and requires three times the media folder size amount of
+                                disk space in order to process properly. Without this option, you need only twice the
+                                media folder size to process properly.
+                             """)
     parser.add_argument("-p", "--fix-photosets",
                         # action="store_true",
                         metavar="blog_name",
@@ -72,8 +84,13 @@ def main():
             # get options
             offline_mode = not args.offline == "not_present"
             fix_photosets = not args.fix_photosets == "not_present"
+            monolithic = args.monolithic
 
             mode = "offline" if offline_mode else "online"
+
+            if monolithic and mode == "online":
+                print("monolithic mode is only available with offline mode.")
+                return
 
             blog_name = ""
             if fix_photosets:
@@ -111,7 +128,7 @@ def main():
                 print(f"found {counts[ptype]} {ptype} post(s)")
 
             l.init_db()
-            l.insert_posts(fix_photosets, blog_name, offline_mode)
+            l.insert_posts(fix_photosets, blog_name, offline_mode, args.monolithic)
 
 
 if __name__ == "__main__":

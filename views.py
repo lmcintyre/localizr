@@ -1,7 +1,7 @@
-import os
+import io
 import sys
 
-from flask import Blueprint, render_template, send_from_directory
+from flask import Blueprint, render_template, send_from_directory, send_file
 from sqlalchemy import func
 from model import *
 
@@ -53,11 +53,19 @@ def type_page(post_type, page):
         page = 1
 
     if post_type == "photoset":
-        pagination = Post.query.join(PhotoPost).filter(Post.type == "photo").filter(PhotoPost.is_photoset).order_by(-Post.unix_timestamp).paginate(page=page, per_page=15)
+        pagination = Post.query.join(PhotoPost)\
+                            .filter(Post.type == "photo")\
+                            .filter(PhotoPost.is_photoset)\
+                            .order_by(-Post.unix_timestamp)\
+                            .paginate(page=page, per_page=15)
     # elif post_type == "text":
-    #     pagination = Post.query.filter(Post.type == post_type).order_by(-Post.unix_timestamp).paginate(page=page, per_page=15)
+    #     pagination = Post.query\
+    #         .filter(Post.type == post_type).order_by(-Post.unix_timestamp).paginate(page=page, per_page=15)
     else:
-        pagination = Post.query.filter(Post.type == post_type).order_by(-Post.unix_timestamp).paginate(page=page, per_page=15)
+        pagination = Post.query\
+                        .filter(Post.type == post_type)\
+                        .order_by(-Post.unix_timestamp)\
+                        .paginate(page=page, per_page=15)
     return render_template("theme.html", type=post_type, posts=pagination.items, pagination=pagination)
 
 
@@ -98,6 +106,13 @@ def post_page(post_id):
 
 @blog.route("/media/<path:filename>")
 def media(filename):
+    key = f"{filename}"
+    media_entry = MediaEntry.query.join(Media).filter(MediaEntry.id == key).first()
+
+    if media_entry is not None:
+        data = media_entry.data[0].data
+        return send_file(io.BytesIO(data), attachment_filename=filename)
+
     basepath = ""
     if getattr(sys, "frozen", False):
         basepath = os.path.dirname(sys.executable)

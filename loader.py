@@ -1,7 +1,7 @@
 import os
 import shutil
-import sys
-
+import re
+import glob
 import eyed3
 import requests
 import inspect
@@ -14,8 +14,7 @@ from bs4 import BeautifulSoup
 from PIL import Image
 from app import Runner, app, basepath
 from model import db, Tag, Post, RegularPost, PhotoPost, Photo, LinkPost, AnswerPost, QuotePost, ConversationPost, \
-    ConversationLine, VideoPost, AudioPost
-
+    ConversationLine, VideoPost, AudioPost, MediaEntry, Media, get_file_hash
 
 request_session = requests.Session()
 request_session.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36"})
@@ -73,7 +72,7 @@ class Loader:
                 results[post["type"]] = 1
         return results
 
-    def insert_posts(self, fix_photosets, blog_name="", offline_mode=False):
+    def insert_posts(self, fix_photosets, blog_name="", offline_mode=False, monolithic=False):
         if self.soup is None:
             raise ValueError("Loader's soup was None")
 
@@ -92,7 +91,7 @@ class Loader:
                     with redirect_to_tqdm():
                         try:
                             # print(f"processing post {post['id']}...")
-                            base, specific = add_post(post, fix_photosets, blog_name, offline_mode)
+                            base, specific = add_post(post, fix_photosets, blog_name, offline_mode, monolithic)
                             posts.append(base)
                             posts.append(specific)
                             ids.append(post["id"])
@@ -115,7 +114,7 @@ class Loader:
             db.session.commit()
             print("done!")
 
-        if offline_mode:
+        if offline_mode and not monolithic:
             if os.path.exists(os.path.join(basepath, "media_old")):
                 print("found a 'media_old' folder, please handle renaming media_tmp and media_old manually")
                 print("or, delete 'media_old' and 'media_tmp' and load the blog again.")
@@ -128,6 +127,11 @@ class Loader:
                 print("obtain the most accurate representation of your blog.")
                 print("otherwise, if you don't care, you can delete the 'media_old' folder entirely.")
                 print("as this program does not delete files, i am not responsible for lost data.")
+
+        if offline_mode and monolithic:
+            print("most blog media is now located in the database for your blog in the same directory as this program.")
+            print("you are now able to delete the 'media_tmp' and 'media' folders entirely without interfering with localizr.")
+            print("as this program does not delete files, i am not responsible for lost data.")
 
 
 def get_photoset_iframe_url(post, blog_name=""):
@@ -174,7 +178,7 @@ def is_copyright(file):
         return False
 
 
-def add_post(post, fix_photosets, blog_name="", offline_mode=False):
+def add_post(post, fix_photosets, blog_name="", offline_mode=False, monolithic=False):
     tag_list = []
     for tag_element in post.find_all("tag"):
         this_tag = Tag(post_id=post["id"], tag=tag_element.text.strip())
@@ -208,7 +212,7 @@ def add_post(post, fix_photosets, blog_name="", offline_mode=False):
     )
 
     if offline_mode:
-        replace_links(post, blog_name)
+        replace_links(post, blog_name, monolithic)
 
     specific_post = None
     if post["type"] == "regular":
@@ -434,22 +438,22 @@ def get_src_url(old_src, extension):
     return va_format.format(src, extension)
 
 
-def process_caption(post, caption_tag, offset):
+def process_caption(post, caption_tag, offset, monolithic):
     caption_text = caption_tag.text.strip() if caption_tag else None
     if caption_text:
         soup2 = BeautifulSoup(caption_text, "html.parser")
         for index, image in enumerate(soup2.find_all("img")):
             url = image["src"]
-            path = process_imgfile(post, index + offset, url)
+            path = process_imgfile(post, index + offset, url, False, monolithic)
             image["src"] = f"/{path}"
         return soup2
 
 
-def replace_links(post, blog_name):
+def replace_links(post, blog_name, monolithic):
     if post["type"] == "regular":
         caption_tag = post.find("regular-body")
         if caption_tag:
-            caption_tag.string = str(process_caption(post, caption_tag, 0))
+            caption_tag.string = str(process_caption(post, caption_tag, 0, monolithic))
 
     elif post["type"] == "photo":
         is_photoset = False if len(post.find_all("photo")) == 0 else True
@@ -461,7 +465,7 @@ def replace_links(post, blog_name):
                 if photo_url_tag["max-width"] == "1280":
                     # only trust id here, so give it -1
                     url = photo_url_tag.text.strip()
-                    path = process_imgfile(post, -1, url)
+                    path = process_imgfile(post, -1, url, False, monolithic)
 
             # set the tags
             for photo_url_tag in post.find_all("photo-url"):
@@ -470,7 +474,7 @@ def replace_links(post, blog_name):
             # here, we always ignore images with _0 suffix. assume they are useless
             caption_tag = post.find("photo-caption")
             if caption_tag:
-                caption_tag.string = str(process_caption(post, caption_tag, 1))
+                caption_tag.string = str(process_caption(post, caption_tag, 1, monolithic))
 
         if is_photoset:
             for index, photo_tag in enumerate(post.find_all("photo")):
@@ -479,7 +483,7 @@ def replace_links(post, blog_name):
                 for photo_url_tag in photo_tag.find_all("photo-url"):
                     if photo_url_tag["max-width"] == "1280":
                         url = photo_url_tag.text.strip()
-                        path = process_imgfile(post, index, url)
+                        path = process_imgfile(post, index, url, False, monolithic)
 
                 for photo_url_tag in photo_tag.find_all("photo-url"):
                     photo_url_tag.string = f"/{path}"
@@ -490,30 +494,30 @@ def replace_links(post, blog_name):
 
             caption_tag = post.find("photo-caption")
             if caption_tag:
-                caption_tag.string = str(process_caption(post, caption_tag, oindex))
+                caption_tag.string = str(process_caption(post, caption_tag, oindex, monolithic))
     elif post["type"] == "link":
         caption_tag = post.find("link-desc")
         if caption_tag:
-            caption_tag.string = str(process_caption(post, caption_tag, 0))
+            caption_tag.string = str(process_caption(post, caption_tag, 0, monolithic))
     elif post["type"] == "answer":
         caption_tag = post.find("answer")
         if caption_tag:
-            caption_tag.string = str(process_caption(post, caption_tag, 0))
+            caption_tag.string = str(process_caption(post, caption_tag, 0, monolithic))
     elif post["type"] == "quote":
         caption_tag = post.find("quote-source")
         if caption_tag:
-            caption_tag.string = str(process_caption(post, caption_tag, 0))
+            caption_tag.string = str(process_caption(post, caption_tag, 0, monolithic))
     elif post["type"] == "audio":
         audio_player = post.find("audio-player")
         if "tumblr_audio_player" in audio_player.text.strip():  # only works on tumblr player
-            process_audiofile(post, blog_name)
+            process_audiofile(post, blog_name, monolithic)
     elif post["type"] == "video":
         video_player = post.find("video-player")
         if "tumblr.com/" in video_player.text.strip():  # only works on tumblr videos
-            process_videofile(post, blog_name)
+            process_videofile(post, blog_name, monolithic)
 
 
-def process_videofile(post, blog_name):
+def process_videofile(post, blog_name, monolithic):
     replacement_format = """<video controls poster="{}"><source src="{}" type="{}"></video>"""
 
     # requisite parsing
@@ -527,12 +531,12 @@ def process_videofile(post, blog_name):
         for index, img in enumerate(imgs):
             url = img["src"]
             # ignore the filesystem because posters are wack
-            path = process_imgfile(post, index, url, True)
+            path = process_imgfile(post, index, url, True, monolithic)
             img["src"] = f"/{path}"
         caption_tag.string = str(soup2)
 
     path = f"{post['id']}.{extension}"
-    full_path = os.path.join("media", path)
+    full_path = os.path.join("/media", path)
     dest_path = os.path.join("media_tmp", path)
 
     video_player = post.find("video-player")
@@ -543,7 +547,9 @@ def process_videofile(post, blog_name):
     if video_exists:
         shutil.copyfile(full_path, os.path.join(basepath, dest_path))
     else:
-        download_media(url, os.path.join(basepath, dest_path))
+        full_path = download_media(url, os.path.join(basepath, dest_path))
+        if full_path:
+            full_path = full_path.replace("_tmp", "")
 
     ext = poster[poster.rindex("."):]
     poster_dest = f"{post['id']}_poster{ext}"
@@ -552,11 +558,17 @@ def process_videofile(post, blog_name):
     # we may get a new save path from download_media, as it handles our extensions properly
     poster_dest = download_media(poster, dest_poster_path)
 
+    # use poster_final_path and full_path for db entry
+    poster_final_path = os.path.join("/media", os.path.basename(poster_dest))
+    if monolithic:
+        add_media_to_db(poster_final_path)
+        add_media_to_db(full_path)
+
     # this poster filename is different from where we expected to find it, so that's why we handle it differently here
-    video_player.string = replacement_format.format(f"/media/{os.path.basename(poster_dest)}", f"/{full_path}", content_type)
+    video_player.string = replacement_format.format(poster_final_path, f"/{full_path}", content_type)
 
 
-def process_audiofile(post, blog_name):
+def process_audiofile(post, blog_name, monolithic):
     replacement_format_poster = """<video class="audio_player_video" controls poster="{}"><source src="{}" type="audio/mp3"></video>"""
     replacement_format_noposter = """<audio class="audio_player" controls src="{}"></audio>"""
     # todo: incorporate title and stuff into the template
@@ -568,12 +580,12 @@ def process_audiofile(post, blog_name):
         for index, img in enumerate(imgs):
             url = img["src"]
             # ignore the filesystem because posters are wack
-            path = process_imgfile(post, index, url, True)
+            path = process_imgfile(post, index, url, True, monolithic)
             img["src"] = f"/{path}"
         caption_tag.string = str(soup2)
 
     path = f"{post['id']}.mp3"
-    full_path = os.path.join("media", path)
+    full_path = os.path.join("/media", path)
     dest_path = os.path.join("media_tmp", path)
 
     audio_player = post.find("audio-player")
@@ -585,7 +597,9 @@ def process_audiofile(post, blog_name):
         shutil.copyfile(full_path, os.path.join(basepath, dest_path))
     else:
         tmp_dest_path = os.path.join(basepath, dest_path)
-        download_media(url, tmp_dest_path)
+        full_path = download_media(url, tmp_dest_path)
+        if full_path:
+            full_path = full_path.replace("_tmp", "")
         # quit here for audio/poster processing
         if not verify_mp3(tmp_dest_path):
             if os.path.exists(tmp_dest_path):
@@ -599,11 +613,18 @@ def process_audiofile(post, blog_name):
         dest_poster = f"{post['id']}_poster{ext}"
         dest_poster_path = os.path.join("media_tmp", dest_poster)
         dest_poster_path = download_media(poster, os.path.join(basepath, dest_poster_path))
+        poster_final_path = os.path.join("/media", os.path.basename(dest_poster_path))
 
     if poster:
-        ret = replacement_format_poster.format(f"/media/{os.path.basename(dest_poster_path)}", f"/{full_path}")
+        ret = replacement_format_poster.format(poster_final_path, f"/{full_path}")
     else:
         ret = replacement_format_noposter.format(f"/{full_path}")
+
+    # use poster_final_path and full_path for db entry
+    if monolithic:
+        if poster:
+            add_media_to_db(poster_final_path)
+        add_media_to_db(full_path)
 
     audio_player.string = ret
 
@@ -640,13 +661,13 @@ def get_online_audio_urls(post, audio_player, blog_name):
     return url, poster
 
 
-def process_imgfile(post, index, url, force_download=False):
+def process_imgfile(post, index, url, force_download, monolithic):
     ext = url[url.rindex("."):]
 
     # because 0 is valid, -1 means "don't add a suffix at all"
     index_text = f"_{index}" if index != -1 else ""
     path = f"{post['id']}{index_text}{ext}"
-    full_path = os.path.join("media", path)
+    full_path = os.path.join("/media", path)
 
     partial_dest = "media_tmp"
     dest_path = os.path.join(partial_dest, path)
@@ -655,7 +676,11 @@ def process_imgfile(post, index, url, force_download=False):
         os.makedirs(partial_dest)
 
     if force_download:
-        download_media(url, dest_path)
+        full_path = download_media(url, dest_path)
+        if full_path:
+            full_path = full_path.replace("_tmp", "")
+        if monolithic:
+            add_media_to_db(full_path)
         return full_path
 
     copyright_check = None
@@ -664,9 +689,15 @@ def process_imgfile(post, index, url, force_download=False):
     if exists:
         copyright_check = is_copyright(full_path)
     if exists and copyright_check or not exists:
-        download_media(url, os.path.join(basepath, dest_path))
+        full_path = download_media(url, os.path.join(basepath, dest_path))
+        if full_path:
+            full_path = full_path.replace("_tmp", "")
     else:
         shutil.copyfile(full_path, os.path.join(basepath, dest_path))
+
+    # use full_path here for db entry
+    if monolithic:
+        add_media_to_db(full_path)
 
     # "media_tmp" will become the new "media", so return that
     # so caller can update tags
@@ -756,3 +787,41 @@ def file_valid(content):
             return "of a 404 error"
 
     return "success"
+
+
+def add_media_to_db(path):
+    # when loading, media is in media_tmp
+    match = re.search(r"\d", path)
+    if match is None:
+        print("could not find post id in file path!")
+        return
+
+    digit = match.start()
+    entry_id = path[digit:]
+
+    media_folder = os.path.abspath("media_tmp")
+    pattern = os.path.join(media_folder, f"{entry_id}.*")
+
+
+    actual_path = os.path.join("media_tmp", entry_id)
+    if not os.path.exists(actual_path):
+        print(f"was asked to add {actual_path} to db, but does not exist!")
+        return
+    file_hash = get_file_hash(actual_path)
+
+    entry = MediaEntry(id=entry_id, file_hash=file_hash)
+    data = b''
+
+    db.session.add(entry)
+    db.session.commit()
+
+    if Media.query.get(file_hash) is not None:
+        return
+
+    size = os.stat(actual_path).st_size
+    with open(actual_path, "rb") as file:
+        data = file.read(size)
+    media = Media(file_hash=file_hash, data=data)
+
+    db.session.add(media)
+    db.session.commit()
